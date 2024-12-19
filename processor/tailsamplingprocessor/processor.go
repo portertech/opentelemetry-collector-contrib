@@ -40,6 +40,8 @@ type policy struct {
 	attribute metric.MeasurementOption
 }
 
+type Option func(*tailSamplingSpanProcessor)
+
 // tailSamplingSpanProcessor handles the incoming trace data and uses the given sampling
 // policy to sample traces.
 type tailSamplingSpanProcessor struct {
@@ -54,6 +56,7 @@ type tailSamplingSpanProcessor struct {
 	idToTrace         sync.Map
 	policyTicker      timeutils.TTicker
 	tickerFrequency   time.Duration
+	onTickHooks       []Option
 	decisionBatcher   idbatcher.Batcher
 	sampledIDCache    cache.Cache[bool]
 	nonSampledIDCache cache.Cache[bool]
@@ -79,8 +82,6 @@ var (
 		sampling.InvertSampled:    attrSampledTrue,
 	}
 )
-
-type Option func(*tailSamplingSpanProcessor)
 
 // newTracesProcessor returns a processor.TracesProcessor that will perform tail sampling according to the given
 // configuration.
@@ -183,6 +184,12 @@ func withNonSampledDecisionCache(c cache.Cache[bool]) Option {
 	}
 }
 
+func withOnTickHook(f func(tsp *tailSamplingSpanProcessor)) Option {
+	return func(tsp *tailSamplingSpanProcessor) {
+		tsp.onTickHooks = append(tsp.onTickHooks, f)
+	}
+}
+
 func getPolicyEvaluator(settings component.TelemetrySettings, cfg *PolicyCfg) (sampling.PolicyEvaluator, error) {
 	switch cfg.Type {
 	case Composite:
@@ -274,6 +281,10 @@ func (tsp *tailSamplingSpanProcessor) loadSamplingPolicy(set processor.Settings,
 }
 
 func (tsp *tailSamplingSpanProcessor) samplingPolicyOnTick() {
+	for _, hook := range tsp.onTickHooks {
+		hook(tsp)
+	}
+
 	metrics := policyMetrics{}
 
 	startTime := time.Now()
