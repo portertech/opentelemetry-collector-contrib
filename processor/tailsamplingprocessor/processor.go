@@ -128,31 +128,9 @@ func newTracesProcessor(ctx context.Context, set processor.Settings, nextConsume
 	}
 
 	if tsp.policies == nil {
-		policyNames := map[string]bool{}
-		tsp.policies = make([]*policy, len(cfg.PolicyCfgs))
-		componentID := set.ID.Name()
-		for i := range cfg.PolicyCfgs {
-			policyCfg := &cfg.PolicyCfgs[i]
-
-			if policyNames[policyCfg.Name] {
-				return nil, fmt.Errorf("duplicate policy name %q", policyCfg.Name)
-			}
-			policyNames[policyCfg.Name] = true
-
-			eval, err := getPolicyEvaluator(telemetrySettings, policyCfg)
-			if err != nil {
-				return nil, err
-			}
-			uniquePolicyName := policyCfg.Name
-			if componentID != "" {
-				uniquePolicyName = fmt.Sprintf("%s.%s", componentID, policyCfg.Name)
-			}
-			p := &policy{
-				name:      policyCfg.Name,
-				evaluator: eval,
-				attribute: metric.WithAttributes(attribute.String("policy", uniquePolicyName)),
-			}
-			tsp.policies[i] = p
+		err := tsp.loadSamplingPolicy(set, cfg)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -260,6 +238,39 @@ func getSharedPolicyEvaluator(settings component.TelemetrySettings, cfg *sharedP
 
 type policyMetrics struct {
 	idNotFoundOnMapCount, evaluateErrorCount, decisionSampled, decisionNotSampled int64
+}
+
+func (tsp *tailSamplingSpanProcessor) loadSamplingPolicy(set processor.Settings, cfg Config) error {
+	telemetrySettings := set.TelemetrySettings
+	policyNames := map[string]bool{}
+	tsp.policies = make([]*policy, len(cfg.PolicyCfgs))
+	componentID := set.ID.Name()
+
+	for i := range cfg.PolicyCfgs {
+		policyCfg := &cfg.PolicyCfgs[i]
+
+		if policyNames[policyCfg.Name] {
+			return fmt.Errorf("duplicate policy name %q", policyCfg.Name)
+		}
+		policyNames[policyCfg.Name] = true
+
+		eval, err := getPolicyEvaluator(telemetrySettings, policyCfg)
+		if err != nil {
+			return err
+		}
+		uniquePolicyName := policyCfg.Name
+		if componentID != "" {
+			uniquePolicyName = fmt.Sprintf("%s.%s", componentID, policyCfg.Name)
+		}
+		p := &policy{
+			name:      policyCfg.Name,
+			evaluator: eval,
+			attribute: metric.WithAttributes(attribute.String("policy", uniquePolicyName)),
+		}
+		tsp.policies[i] = p
+	}
+
+	return nil
 }
 
 func (tsp *tailSamplingSpanProcessor) samplingPolicyOnTick() {
