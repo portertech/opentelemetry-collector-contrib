@@ -129,9 +129,8 @@ func TestSamplingMultiplePolicies(t *testing.T) {
 		require.NoError(t, p.Shutdown(context.Background()))
 	}()
 
-	// InvertNotSampled takes precedence
 	mpe1.NextDecision = sampling.Sampled
-	mpe2.NextDecision = sampling.Sampled
+	mpe2.NextDecision = sampling.NotSampled
 
 	// Generate and deliver first span
 	require.NoError(t, p.ConsumeTraces(context.Background(), simpleTraces()))
@@ -146,9 +145,9 @@ func TestSamplingMultiplePolicies(t *testing.T) {
 	// This will cause policy evaluations on the first span
 	tsp.policyTicker.OnTick()
 
-	// Both policies should have been evaluated once
+	// Only the first policy should have been evaluated
 	require.EqualValues(t, 1, mpe1.EvaluationCount)
-	require.EqualValues(t, 1, mpe2.EvaluationCount)
+	require.EqualValues(t, 0, mpe2.EvaluationCount)
 
 	// The final decision SHOULD be Sampled.
 	require.EqualValues(t, 1, nextConsumer.SpanCount())

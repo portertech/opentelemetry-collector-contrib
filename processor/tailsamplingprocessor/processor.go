@@ -60,6 +60,7 @@ type tailSamplingSpanProcessor struct {
 	nonSampledIDCache cache.Cache[bool]
 	deleteChan        chan pcommon.TraceID
 	numTracesOnMap    *atomic.Uint64
+	usingInvertMatch  bool
 
 	setPolicyMux  sync.Mutex
 	pendingPolicy []PolicyCfg
@@ -245,6 +246,19 @@ type policyMetrics struct {
 	idNotFoundOnMapCount, evaluateErrorCount, decisionSampled, decisionNotSampled int64
 }
 
+func hasInvertMatch(cfg *PolicyCfg) bool {
+	switch cfg.Type {
+	case NumericAttribute:
+		return cfg.NumericAttributeCfg.InvertMatch
+	case StringAttribute:
+		return cfg.StringAttributeCfg.InvertMatch
+	case BooleanAttribute:
+		return cfg.BooleanAttributeCfg.InvertMatch
+	default:
+		return false
+	}
+}
+
 func (tsp *tailSamplingSpanProcessor) loadSamplingPolicy(cfgs []PolicyCfg) error {
 	telemetrySettings := tsp.set.TelemetrySettings
 	componentID := tsp.set.ID.Name()
@@ -252,6 +266,7 @@ func (tsp *tailSamplingSpanProcessor) loadSamplingPolicy(cfgs []PolicyCfg) error
 	cLen := len(cfgs)
 	policies := make([]*policy, 0, cLen)
 	policyNames := make(map[string]struct{}, cLen)
+	usingInvertMatch := false
 
 	for _, cfg := range cfgs {
 		if cfg.Name == "" {
@@ -278,8 +293,13 @@ func (tsp *tailSamplingSpanProcessor) loadSamplingPolicy(cfgs []PolicyCfg) error
 			evaluator: eval,
 			attribute: metric.WithAttributes(attribute.String("policy", uniquePolicyName)),
 		})
+
+		if hasInvertMatch(&cfg) {
+			usingInvertMatch = true
+		}
 	}
 
+	tsp.usingInvertMatch = usingInvertMatch
 	tsp.policies = policies
 
 	tsp.logger.Debug("Loaded sampling policy", zap.Int("policies.len", len(policies)))
@@ -379,7 +399,8 @@ func (tsp *tailSamplingSpanProcessor) makeDecision(id pcommon.TraceID, trace *sa
 	ctx := context.Background()
 	startTime := time.Now()
 
-	// Check all policies before making a final decision.
+	// Evaluate each policy and break on first sampled decision if invert match
+	// is not used. Otherwise, evaluate all policies and make a final decision.
 	for _, p := range tsp.policies {
 		decision, err := p.evaluator.Evaluate(ctx, id, trace)
 		latency := time.Since(startTime)
@@ -399,6 +420,10 @@ func (tsp *tailSamplingSpanProcessor) makeDecision(id pcommon.TraceID, trace *sa
 		}
 
 		decisions[decision] = true
+
+		if !tsp.usingInvertMatch && decision == sampling.Sampled {
+			break
+		}
 	}
 
 	var finalDecision sampling.Decision
