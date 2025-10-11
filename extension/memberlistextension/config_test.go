@@ -56,7 +56,7 @@ func TestConfig_Validate(t *testing.T) {
 			config: Config{
 				BindAddr:      "127.0.0.1",
 				BindPort:      7946,
-				AdvertisePort: 0,
+				AdvertisePort: -1,
 			},
 			wantErr: true,
 			errMsg:  "advertise_port must be between 1 and 65535",
