@@ -59,6 +59,9 @@ func newLoadBalancer(logger *zap.Logger, cfg component.Config, factory component
 	if oCfg.Resolver.K8sSvc.HasValue() {
 		count++
 	}
+	if oCfg.Resolver.Memberlist.HasValue() {
+		count++
+	}
 	if count > 1 {
 		return nil, errMultipleResolversProvided
 	}
@@ -132,6 +135,20 @@ func newLoadBalancer(logger *zap.Logger, cfg component.Config, factory component
 		}
 	}
 
+	if oCfg.Resolver.Memberlist.HasValue() {
+		memberlistLogger := logger.With(zap.String("resolver", "memberlist"))
+
+		var err error
+		memberlistResolver := oCfg.Resolver.Memberlist.Get()
+		res, err = newMemberlistResolver(
+			memberlistLogger,
+			memberlistResolver.ExtensionID,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if res == nil {
 		return nil, errNoResolver
 	}
@@ -145,6 +162,13 @@ func newLoadBalancer(logger *zap.Logger, cfg component.Config, factory component
 }
 
 func (lb *loadBalancer) Start(ctx context.Context, host component.Host) error {
+	// If using memberlist resolver, initialize the extension connection
+	if memberlistRes, ok := lb.res.(*memberlistResolver); ok {
+		if err := memberlistRes.initializeExtension(host); err != nil {
+			return err
+		}
+	}
+
 	lb.res.onChange(lb.onBackendChanges)
 	lb.host = host
 	return lb.res.start(ctx)

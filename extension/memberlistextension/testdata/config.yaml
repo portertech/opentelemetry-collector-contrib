@@ -1,0 +1,67 @@
+extensions:
+  memberlist:
+    bind_addr: "127.0.0.1"
+    bind_port: 7946
+    advertise_addr: "127.0.0.1"
+    advertise_port: 7946
+    join_addrs:
+      - "192.168.1.10:7946"
+      - "192.168.1.11:7946"
+    node_name: "collector-1"
+    gossip_interval: 200ms
+    probe_interval: 1s
+    probe_timeout: 500ms
+    suspicion_mult: 4
+    push_pull_interval: 30s
+    tcp_timeout: 10s
+    indirect_checks: 3
+    retransmit_mult: 4
+
+  memberlist/cluster1:
+    bind_addr: "0.0.0.0"
+    bind_port: 7946
+    advertise_addr: "10.0.1.100"
+    advertise_port: 7946
+    join_addrs:
+      - "10.0.1.10:7946"
+      - "10.0.1.11:7946"
+    node_name: "collector-cluster1"
+    secret_key: "1234567890123456"  # 16-byte encryption key
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: localhost:4317
+
+exporters:
+  loadbalancing:
+    routing_key: "service"
+    protocol:
+      otlp:
+        timeout: 1s
+    resolver:
+      memberlist:
+        extension_id: "memberlist"
+
+  loadbalancing/cluster1:
+    routing_key: "traceID"
+    protocol:
+      otlp:
+        timeout: 1s
+    resolver:
+      memberlist:
+        extension_id: "memberlist/cluster1"
+
+service:
+  extensions: [memberlist, memberlist/cluster1]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: []
+      exporters: [loadbalancing]
+    
+    logs:
+      receivers: [otlp]
+      processors: []
+      exporters: [loadbalancing/cluster1]

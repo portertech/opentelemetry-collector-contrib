@@ -1,0 +1,17 @@
+type: memberlist
+
+status:
+  class: extension
+  stability:
+    development: [extension]
+  distributions: [contrib]
+  codeowners:
+    active: []
+    seeking_new: true
+
+tests:
+  config:
+    bind_addr: "127.0.0.1"
+    bind_port: 7946
+    advertise_addr: "127.0.0.1"
+    advertise_port: 7946

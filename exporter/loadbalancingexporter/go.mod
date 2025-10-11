@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/servicediscovery v1.36.0
 	github.com/aws/smithy-go v1.22.5
 	github.com/json-iterator/go v1.1.12
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/memberlistextension v0.115.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/exp/metrics v0.137.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/batchpersignal v0.137.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/golden v0.137.0
@@ -42,6 +43,7 @@ require (
 )
 
 require (
+	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.37.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.1 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.0 // indirect
@@ -74,6 +76,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
+	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-tpm v0.9.6 // indirect
@@ -81,7 +84,15 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grafana/regexp v0.0.0-20240518133315-a468a5bfb3bc // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-immutable-radix v1.0.0 // indirect
+	github.com/hashicorp/go-metrics v0.5.4 // indirect
+	github.com/hashicorp/go-msgpack/v2 v2.1.1 // indirect
+	github.com/hashicorp/go-multierror v1.0.0 // indirect
+	github.com/hashicorp/go-sockaddr v1.0.0 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
+	github.com/hashicorp/golang-lru v0.5.0 // indirect
+	github.com/hashicorp/memberlist v0.5.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
@@ -90,6 +101,7 @@ require (
 	github.com/knadh/koanf/v2 v2.3.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/miekg/dns v1.1.26 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -105,6 +117,7 @@ require (
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/otlptranslator v0.0.2 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
+	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.8 // indirect
 	github.com/spf13/cobra v1.10.1 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
@@ -201,6 +214,8 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 	sigs.k8s.io/yaml v1.5.0 // indirect
 )
+
+replace github.com/open-telemetry/opentelemetry-collector-contrib/extension/memberlistextension => ../../extension/memberlistextension
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/batchpersignal => ../../pkg/batchpersignal
 

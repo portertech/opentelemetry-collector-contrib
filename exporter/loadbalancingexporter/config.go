@@ -65,6 +65,7 @@ type ResolverSettings struct {
 	DNS         configoptional.Optional[DNSResolver]         `mapstructure:"dns"`
 	K8sSvc      configoptional.Optional[K8sSvcResolver]      `mapstructure:"k8s"`
 	AWSCloudMap configoptional.Optional[AWSCloudMapResolver] `mapstructure:"aws_cloud_map"`
+	Memberlist  configoptional.Optional[MemberlistResolver]  `mapstructure:"memberlist"`
 	// prevent unkeyed literal initialization
 	_ struct{}
 }
@@ -103,4 +104,11 @@ type AWSCloudMapResolver struct {
 	Interval      time.Duration            `mapstructure:"interval"`
 	Timeout       time.Duration            `mapstructure:"timeout"`
 	Port          *uint16                  `mapstructure:"port"`
+}
+
+// MemberlistResolver defines the configuration for the memberlist resolver
+type MemberlistResolver struct {
+	ExtensionID string `mapstructure:"extension_id"`
+	// prevent unkeyed literal initialization
+	_ struct{}
 }
