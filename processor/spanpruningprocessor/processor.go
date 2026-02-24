@@ -198,7 +198,7 @@ func (p *spanPruningProcessor) traceMatchesConditions(ctx context.Context, spans
 		matches, err := p.conditions.Eval(ctx, tCtx)
 		tCtx.Close()
 		if err != nil {
-			// On error, continue checking other spans (ignore errors per OTTL error mode)
+			p.logger.Debug("OTTL condition evaluation error", zap.Error(err))
 			continue
 		}
 		if matches {
