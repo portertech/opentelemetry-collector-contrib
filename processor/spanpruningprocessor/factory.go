@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/processorhelper"
+	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter/filterottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
@@ -90,6 +91,7 @@ func createTracesProcessor(
 		if err != nil {
 			return nil, err
 		}
+		set.Logger.Info("OTTL conditions configured", zap.Int("count", len(pCfg.Conditions)))
 	}
 
 	p, err := newSpanPruningProcessor(set, pCfg, telemetryBuilder, conditions)
