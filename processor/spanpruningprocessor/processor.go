@@ -16,6 +16,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/ottlspan"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/spanpruningprocessor/internal/metadata"
 )
 
@@ -39,6 +41,7 @@ type spanPruningProcessor struct {
 	telemetryBuilder            *metadata.TelemetryBuilder
 	enableAttributeLossAnalysis bool
 	enableBytesMetrics          bool
+	conditions                  *ottl.ConditionSequence[*ottlspan.TransformContext]
 }
 
 func newSpanPruningProcessor(set processor.Settings, cfg *Config, telemetryBuilder *metadata.TelemetryBuilder) (*spanPruningProcessor, error) {
