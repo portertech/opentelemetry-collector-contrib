@@ -17,7 +17,12 @@ import (
 	"go.opentelemetry.io/collector/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter/filterottl"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/spanpruningprocessor/internal/metadata"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/spanpruningprocessor/internal/metadatatest"
 )
@@ -2793,6 +2798,64 @@ func TestOTTLConditions_NoSpansMatch(t *testing.T) {
 	// No summary span should exist
 	summarySpan := findSummarySpan(td)
 	require.Equal(t, ptrace.Span{}, summarySpan)
+}
+
+// TestOTTLConditions_EvalErrorLogging tests that OTTL evaluation errors are logged at Error level
+// and the processor continues processing without crashing
+func TestOTTLConditions_EvalErrorLogging(t *testing.T) {
+	// Create an observed logger to capture log output
+	observedZapCore, observedLogs := observer.New(zapcore.ErrorLevel)
+	logger := zap.New(observedZapCore)
+
+	factory := NewFactory()
+	cfg := factory.CreateDefaultConfig().(*Config)
+	cfg.MinSpansToAggregate = 2
+	// Use ParseJSON with a string that is not valid JSON - this will cause a runtime error
+	// The db.operation attribute contains "select" which is not valid JSON
+	cfg.Conditions = []string{`ParseJSON(attributes["db.operation"])["key"] == "value"`}
+
+	// Create processor settings with the observed logger
+	settings := processortest.NewNopSettings(metadata.Type)
+	settings.Logger = logger
+
+	telemetryBuilder, err := metadata.NewTelemetryBuilder(settings.TelemetrySettings)
+	require.NoError(t, err)
+
+	// Create the conditions sequence with PropagateError to ensure errors are returned
+	conditions, err := filterottl.NewBoolExprForSpan(
+		cfg.Conditions,
+		filterottl.StandardSpanFuncs(),
+		ottl.PropagateError,
+		settings.TelemetrySettings,
+	)
+	require.NoError(t, err)
+
+	p, err := newSpanPruningProcessor(settings, cfg, telemetryBuilder, conditions)
+	require.NoError(t, err)
+
+	// Create a trace with spans that have string attribute "db.operation" = "select"
+	// ParseJSON("select") will fail because "select" is not valid JSON
+	td := createTestTraceWithLeafSpans(t, 3, "SELECT", map[string]string{"db.operation": "select"})
+	originalSpanCount := countSpans(td)
+
+	// Process the trace - should not crash
+	resultTd, err := p.processTraces(t.Context(), td)
+	require.NoError(t, err, "processor should not return error for OTTL eval errors")
+
+	// Verify the trace passed through unchanged (no match due to eval errors)
+	finalSpanCount := countSpans(resultTd)
+	assert.Equal(t, originalSpanCount, finalSpanCount, "trace should pass through unchanged when conditions fail to evaluate")
+
+	// Verify that errors were logged at Error level
+	// Each span that fails evaluation should log an error
+	logEntries := observedLogs.All()
+	assert.Positive(t, len(logEntries), "should have logged OTTL evaluation errors")
+
+	// Verify the log message contains expected information
+	for _, entry := range logEntries {
+		assert.Equal(t, zapcore.ErrorLevel, entry.Level, "should log at Error level")
+		assert.Contains(t, entry.Message, "OTTL condition evaluation error")
+	}
 }
 
 // Helper functions for OTTL condition tests
