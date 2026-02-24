@@ -157,6 +157,13 @@ type Config struct {
 	// OutlierAnalysis configures IQR-based outlier detection and
 	// attribute correlation for aggregation groups.
 	OutlierAnalysis OutlierAnalysisConfig `mapstructure:"outlier_analysis"`
+
+	// Conditions is a list of OTTL conditions that determine which traces
+	// should be pruned. Conditions use OTTL span context syntax. When empty,
+	// all traces are pruned (current behavior). When set, only traces where
+	// at least one span matches any condition are pruned.
+	// Example: `resource.attributes["service.name"] == "loki-query-engine"`
+	Conditions []string `mapstructure:"conditions"`
 }
 
 var _ component.Config = (*Config)(nil)
