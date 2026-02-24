@@ -44,7 +44,7 @@ type spanPruningProcessor struct {
 	conditions                  *ottl.ConditionSequence[*ottlspan.TransformContext]
 }
 
-func newSpanPruningProcessor(set processor.Settings, cfg *Config, telemetryBuilder *metadata.TelemetryBuilder) (*spanPruningProcessor, error) {
+func newSpanPruningProcessor(set processor.Settings, cfg *Config, telemetryBuilder *metadata.TelemetryBuilder, conditions *ottl.ConditionSequence[*ottlspan.TransformContext]) (*spanPruningProcessor, error) {
 	// Compile glob patterns for group_by_attributes
 	patterns := make([]attributePattern, 0, len(cfg.GroupByAttributes))
 	for _, pattern := range cfg.GroupByAttributes {
@@ -64,6 +64,7 @@ func newSpanPruningProcessor(set processor.Settings, cfg *Config, telemetryBuild
 		telemetryBuilder:            telemetryBuilder,
 		enableAttributeLossAnalysis: cfg.EnableAttributeLossAnalysis,
 		enableBytesMetrics:          cfg.EnableBytesMetrics,
+		conditions:                  conditions,
 	}, nil
 }
 
