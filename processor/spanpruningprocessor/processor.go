@@ -125,6 +125,12 @@ func (p *spanPruningProcessor) processTraces(ctx context.Context, td ptrace.Trac
 	// Process each trace independently
 	tracesProcessed := int64(0)
 	for _, spans := range traceSpans {
+		// Check if trace matches conditions before pruning
+		// When conditions is nil, all traces match (current behavior preserved)
+		// When conditions is set, only traces with at least one matching span are pruned
+		if !p.traceMatchesConditions(ctx, spans) {
+			continue // Skip pruning for traces that don't match conditions
+		}
 		p.processTrace(ctx, spans)
 		tracesProcessed++
 	}
