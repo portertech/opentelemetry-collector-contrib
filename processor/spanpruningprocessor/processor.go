@@ -124,11 +124,13 @@ func (p *spanPruningProcessor) processTraces(ctx context.Context, td ptrace.Trac
 
 	// Process each trace independently
 	tracesProcessed := int64(0)
+	tracesSkipped := int64(0)
 	for _, spans := range traceSpans {
 		// Check if trace matches conditions before pruning
 		// When conditions is nil, all traces match (current behavior preserved)
 		// When conditions is set, only traces with at least one matching span are pruned
 		if !p.traceMatchesConditions(ctx, spans) {
+			tracesSkipped++
 			continue // Skip pruning for traces that don't match conditions
 		}
 		p.processTrace(ctx, spans)
@@ -140,6 +142,9 @@ func (p *spanPruningProcessor) processTraces(ctx context.Context, td ptrace.Trac
 		p.telemetryBuilder.ProcessorSpanpruningTracesProcessed.Add(ctx, tracesProcessed)
 		p.telemetryBuilder.ProcessorSpanpruningProcessingDuration.Record(ctx,
 			time.Since(start).Seconds())
+	}
+	if tracesSkipped > 0 {
+		p.telemetryBuilder.ProcessorSpanpruningTracesSkipped.Add(ctx, tracesSkipped)
 	}
 
 	// Measure bytes emitted after processing
