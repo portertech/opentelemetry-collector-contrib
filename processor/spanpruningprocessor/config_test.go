@@ -387,6 +387,33 @@ func TestConfig_Validate(t *testing.T) {
 			},
 			expectError: true,
 		},
+		{
+			name: "empty conditions string",
+			config: &Config{
+				MinSpansToAggregate:        2,
+				AggregationAttributePrefix: "aggregation.",
+				Conditions:                 []string{"resource.attributes[\"service.name\"] == \"test\"", ""},
+			},
+			expectError: true,
+		},
+		{
+			name: "whitespace-only conditions string",
+			config: &Config{
+				MinSpansToAggregate:        2,
+				AggregationAttributePrefix: "aggregation.",
+				Conditions:                 []string{"   "},
+			},
+			expectError: true,
+		},
+		{
+			name: "valid conditions",
+			config: &Config{
+				MinSpansToAggregate:        2,
+				AggregationAttributePrefix: "aggregation.",
+				Conditions:                 []string{"resource.attributes[\"service.name\"] == \"test\"", "attributes[\"http.status_code\"] == 500"},
+			},
+			expectError: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -199,6 +199,13 @@ func (cfg *Config) Validate() error {
 		}
 	}
 
+	// Validate Conditions (OTTL syntax validated at factory time)
+	for i, cond := range cfg.Conditions {
+		if strings.TrimSpace(cond) == "" {
+			return fmt.Errorf("conditions[%d] cannot be empty", i)
+		}
+	}
+
 	// Validate histogram buckets
 	for i, bucket := range cfg.AggregationHistogramBuckets {
 		if bucket <= 0 {
