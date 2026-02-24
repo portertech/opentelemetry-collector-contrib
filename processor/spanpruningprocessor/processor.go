@@ -21,10 +21,12 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/spanpruningprocessor/internal/metadata"
 )
 
-// spanInfo pairs a span with its ScopeSpans container for in-place edits.
+// spanInfo pairs a span with its ScopeSpans and ResourceSpans containers for in-place edits
+// and OTTL context creation.
 type spanInfo struct {
-	span       ptrace.Span
-	scopeSpans ptrace.ScopeSpans
+	span          ptrace.Span
+	scopeSpans    ptrace.ScopeSpans
+	resourceSpans ptrace.ResourceSpans
 }
 
 // attributePattern caches a compiled glob used for attribute key matching.
@@ -159,14 +161,41 @@ func (*spanPruningProcessor) groupSpansByTraceID(td ptrace.Traces) map[pcommon.T
 				span := spans.At(k)
 				traceID := span.TraceID()
 				traceSpans[traceID] = append(traceSpans[traceID], spanInfo{
-					span:       span,
-					scopeSpans: ils,
+					span:          span,
+					scopeSpans:    ils,
+					resourceSpans: rs,
 				})
 			}
 		}
 	}
 
 	return traceSpans
+}
+
+// traceMatchesConditions evaluates whether any span in the trace matches the configured
+// OTTL conditions. Returns true when no conditions are configured (prune all traces).
+// When conditions are set, returns true if at least one span matches any condition.
+func (p *spanPruningProcessor) traceMatchesConditions(ctx context.Context, spans []spanInfo) bool {
+	// No conditions configured means all traces should be pruned (current behavior)
+	if p.conditions == nil {
+		return true
+	}
+
+	// Check each span against the conditions
+	for _, si := range spans {
+		tCtx := ottlspan.NewTransformContextPtr(si.resourceSpans, si.scopeSpans, si.span)
+		matches, err := p.conditions.Eval(ctx, tCtx)
+		tCtx.Close()
+		if err != nil {
+			// On error, continue checking other spans (ignore errors per OTTL error mode)
+			continue
+		}
+		if matches {
+			return true
+		}
+	}
+
+	return false
 }
 
 // processTrace applies the pruning algorithm to a single trace:
